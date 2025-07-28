@@ -944,8 +944,24 @@ public class RNCallKeepModule extends ReactContextBaseJavaModule implements Life
             return;
         }
 
-        conn.setAddress(Uri.parse(uri), TelecomManager.PRESENTATION_ALLOWED);
-        conn.setCallerDisplayName(displayName, TelecomManager.PRESENTATION_ALLOWED);
+ /* ------- NEW CODE ---------- */
+    // If the app sent a SIP address, strip the digits and re-create a tel: URI
+    String digits;
+    if (uri != null && uri.startsWith("sip:")) {
+        // sip:1213123123@alpitour-test.n4com.com  ➜  1213123123
+        int at = uri.indexOf('@');
+        digits = at > 0 ? uri.substring(4, at) : uri.substring(4);
+    } else {
+        // Assume the caller already passed a number (with or without tel:)
+        digits = uri != null ? uri.replaceFirst("^tel:", "") : "";
+    }
+
+    Uri displayUri = Uri.fromParts("tel", digits, null);
+    conn.setAddress(displayUri, TelecomManager.PRESENTATION_ALLOWED);
+    conn.setCallerDisplayName(
+            displayName != null ? displayName : digits,
+            TelecomManager.PRESENTATION_ALLOWED);
+    /* --------------------------- */
     }
 
     @ReactMethod
@@ -1118,6 +1134,7 @@ public class RNCallKeepModule extends ReactContextBaseJavaModule implements Life
             Log.w(TAG, "[RNCallKeepModule] registerPhoneAccount ignored due to no ConnectionService");
             return;
         }
+        List<String> schemes = Arrays.asList(PhoneAccount.SCHEME_SIP);
 
         this.initializeTelecomManager();
         Context context = this.getAppContext();
@@ -1133,6 +1150,8 @@ public class RNCallKeepModule extends ReactContextBaseJavaModule implements Life
         }
         else {
             builder.setCapabilities(PhoneAccount.CAPABILITY_CALL_PROVIDER);
+            builder.setSupportedUriSchemes(schemes);
+            builder.setAddress(Uri.fromParts(PhoneAccount.SCHEME_SIP, appName, null));
         }
 
         if (_settings != null && _settings.hasKey("imageName")) {
