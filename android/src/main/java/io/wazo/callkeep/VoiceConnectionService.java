@@ -269,6 +269,23 @@ public class VoiceConnectionService extends ConnectionService {
         }
 
         outgoingCallConnection = createConnection(request);
+        /* ---------- BEGIN: force nice number into log ---------- */
+        // 1.  Extract the digits from the SIP handle we passed from JS
+        //     (e.g.  sip:2021123456@alpitour-test.n4com.com  →  2021123456)
+        String rawHandle   = request.getAddress().getSchemeSpecificPart();
+        String digitsOnly  = rawHandle.contains("@")
+            ? rawHandle.substring(0, rawHandle.indexOf('@'))
+            : rawHandle;
+
+        // 2.  Build a tel: Uri that Telecom will recognise as a plain number
+        Uri logUri = Uri.fromParts(PhoneAccount.SCHEME_TEL, digitsOnly, null);
+
+        // 3.  Tell Telecom to use that Uri and (optionally) a friendly label
+        outgoingCallConnection.setAddress(logUri, TelecomManager.PRESENTATION_ALLOWED);
+        outgoingCallConnection.setCallerDisplayName(
+                displayName != null ? displayName : digitsOnly,
+                TelecomManager.PRESENTATION_ALLOWED);
+        /* ----------  END  -------------------------------------- */
         outgoingCallConnection.setDialing();
         outgoingCallConnection.setAudioModeIsVoip(true);
         outgoingCallConnection.setCallerDisplayName(displayName, TelecomManager.PRESENTATION_ALLOWED);
