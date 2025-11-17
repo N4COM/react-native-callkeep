@@ -166,6 +166,11 @@ RCT_EXPORT_MODULE()
     if (_hasListeners) {
         [self sendEventWithName:name body:body];
     } else {
+        // Initialize _delayedEvents if nil (handles race condition where init hasn't been called yet)
+        if (_delayedEvents == nil) {
+            _delayedEvents = [NSMutableArray array];
+        }
+        
         NSDictionary *dictionary = [NSDictionary dictionaryWithObjectsAndKeys:
             name, @"name",
             body, @"data",
